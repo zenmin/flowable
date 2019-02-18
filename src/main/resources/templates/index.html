@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<hr>
+启动一个报销流程 传入用户id  和要报销的金额，
+金额大于500 老板审批 小于500 经理审批
+    <form action="/add">
+        userId:<input type="text" name="userId"/>
+        <br>
+        money:<input type="text" name="money"/>
+        <br>
+        <input type="submit">添加审批</input>
+        <br>
+    </form>
+    <hr>
+    <form action="/list">
+        userId:<input type="text" name="userId"/>
+        <br>
+        <input type="submit">获取当前审批Task列表</input>
+        <br>
+    </form>
+    <hr>
+    <form action="/apply">
+        taskId:<input type="text" name="taskId"/>
+        <br>
+        <input type="submit">批准</input>
+        <br>
+    </form>
+    <hr>
+    <form action="/reject">
+        taskId:<input type="text" name="taskId"/>
+        <br>
+        <input type="submit">拒绝</input>
+        <br>
+    </form>
+    <hr>
+    <form action="/processDiagram">
+        processId:<input type="text" name="processId"/>
+        <br>
+        <input type="submit">生成流程图</input>
+        <br>
+    </form>
+    <br>
+    <form action="/info">
+        processId:<input type="text" name="processId"/>
+        <br>
+        <input type="submit">流程信息</input>
+        <br>
+    </form>
+</body>
+</html>
