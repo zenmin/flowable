@@ -3,11 +3,14 @@ package com.zm.flowable.controller;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.engine.*;
 import org.flowable.engine.history.HistoricActivityInstance;
+import org.flowable.engine.history.HistoricDetail;
+import org.flowable.engine.history.HistoricDetailQuery;
 import org.flowable.engine.impl.persistence.entity.HistoricActivityInstanceEntityImpl;
 import org.flowable.engine.runtime.Execution;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.image.ProcessDiagramGenerator;
 import org.flowable.task.api.Task;
+import org.flowable.variable.api.history.HistoricVariableInstanceQuery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -85,6 +88,7 @@ public class ExpenseController {
         //通过审核
         HashMap<String, Object> map = new HashMap<>();
         map.put("outcome", "通过");
+        taskService.setVariableLocal(taskId,"outcome","通过");
         taskService.complete(taskId, map);
         return "processed ok!";
     }
@@ -97,6 +101,7 @@ public class ExpenseController {
     public String reject(String taskId) {
         HashMap<String, Object> map = new HashMap<>();
         map.put("outcome", "驳回");
+        taskService.setVariableLocal(taskId,"outcome","驳回");
         taskService.complete(taskId, map);
         return "processed reject";
     }
@@ -116,23 +121,35 @@ public class ExpenseController {
                 .processInstanceId(InstanceId)
                 .list();
         HistoryService historyService = processEngine.getHistoryService();
+
+        //历史详情  包含TASK步骤
         List<HistoricActivityInstance> activities =
                         historyService.createHistoricActivityInstanceQuery()
                         .processInstanceId(pi.getId())
                         .finished()
                         .orderByHistoricActivityInstanceEndTime().asc()
-                        .list();
-        // 过滤exclusiveGateway
+                        .listPage(0,100);
+
+        // 历史概况
         List<HistoricActivityInstance> historicActivityInstances = activities.stream().filter(o -> o.getActivityName() != null).collect(Collectors.toList());
         List<Map<String,Object>> tasks = new ArrayList<>();
+
+        // task参数
+        HistoricVariableInstanceQuery historicVariableInstanceQuery = historyService.createHistoricVariableInstanceQuery();
+
         historicActivityInstances.stream().forEach(h -> {
+
             Map<String,Object> map = new LinkedHashMap<>();
-            map.put("步骤id",h.getId());
+            String taskId = h.getTaskId();
+            map.put("步骤id",h.getTaskId());
             map.put("根流程id",h.getProcessInstanceId());
             map.put("步骤",((HistoricActivityInstanceEntityImpl) h).getRevision());
             map.put("activityId",h.getActivityId());
             map.put("activityName",h.getActivityName());
             map.put("activityType",h.getActivityType());
+            map.put("持续时间",h.getDurationInMillis()+"ms");
+            if(taskId != null)
+                map.put("步骤参数",historicVariableInstanceQuery.taskId(taskId).list());
             tasks.add(map);
         });
 

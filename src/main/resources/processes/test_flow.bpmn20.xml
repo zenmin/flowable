@@ -7,7 +7,7 @@
   <process id="Expense" name="ExpenseProcess" isExecutable="true">
     <documentation>报销流程</documentation>
     <startEvent id="start" name="开始"></startEvent>
-    <userTask id="fillTask" name="出差报销申请创建" flowable:assignee="${taskUser}">
+    <userTask id="fillTask" name="申请人提交" flowable:assignee="${taskUser}">
       <extensionElements>
         <modeler:initiator-can-complete xmlns:modeler="http://flowable.org/modeler">
           <![CDATA[false]]></modeler:initiator-can-complete>
