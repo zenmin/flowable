@@ -1,10 +1,9 @@
 package com.zm.flowable.controller;
 
-import org.flowable.bpmn.model.BpmnModel;
+import org.flowable.bpmn.model.*;
+import org.flowable.bpmn.model.Process;
 import org.flowable.engine.*;
 import org.flowable.engine.history.HistoricActivityInstance;
-import org.flowable.engine.history.HistoricDetail;
-import org.flowable.engine.history.HistoricDetailQuery;
 import org.flowable.engine.impl.persistence.entity.HistoricActivityInstanceEntityImpl;
 import org.flowable.engine.runtime.Execution;
 import org.flowable.engine.runtime.ProcessInstance;
@@ -12,6 +11,7 @@ import org.flowable.image.ProcessDiagramGenerator;
 import org.flowable.task.api.Task;
 import org.flowable.variable.api.history.HistoricVariableInstanceQuery;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -89,6 +89,7 @@ public class ExpenseController {
         HashMap<String, Object> map = new HashMap<>();
         map.put("outcome", "通过");
         taskService.setVariableLocal(taskId,"outcome","通过");
+        taskService.setVariableLocal(taskId,"reslover","zm");
         taskService.complete(taskId, map);
         return "processed ok!";
     }
@@ -102,6 +103,7 @@ public class ExpenseController {
         HashMap<String, Object> map = new HashMap<>();
         map.put("outcome", "驳回");
         taskService.setVariableLocal(taskId,"outcome","驳回");
+        taskService.setVariableLocal(taskId,"reslover","zm");
         taskService.complete(taskId, map);
         return "processed reject";
     }
@@ -143,13 +145,18 @@ public class ExpenseController {
             String taskId = h.getTaskId();
             map.put("步骤id",h.getTaskId());
             map.put("根流程id",h.getProcessInstanceId());
-            map.put("步骤",((HistoricActivityInstanceEntityImpl) h).getRevision());
+            map.put("是否是初始或结束步骤",((HistoricActivityInstanceEntityImpl) h).getRevision() == 1);
             map.put("activityId",h.getActivityId());
             map.put("activityName",h.getActivityName());
             map.put("activityType",h.getActivityType());
             map.put("持续时间",h.getDurationInMillis()+"ms");
-            if(taskId != null)
-                map.put("步骤参数",historicVariableInstanceQuery.taskId(taskId).list());
+            if(taskId != null){
+                HistoricVariableInstanceQuery his = historicVariableInstanceQuery.taskId(h.getTaskId());
+                Map<String,Object> map1 = new HashMap<>();
+                map1.put("outcome",his.variableName("outcome").singleResult().getValue());
+                map1.put("reslover",his.variableName("reslover").singleResult().getValue());
+                map.put("步骤参数", map1);
+            }
             tasks.add(map);
         });
 
@@ -159,6 +166,21 @@ public class ExpenseController {
         map.put("当前步骤（Task）id",task.getId());
         map.put("当前步骤",task.getName());
         map.put("历史步骤",tasks);
+        // 获取流程配置信息
+
+        BpmnModel bpmnModel = repositoryService.getBpmnModel(pi.getProcessDefinitionId());
+        Process process = bpmnModel.getProcesses().get(0);
+        Collection<FlowElement> flowElements = process.getFlowElements();
+        List<Map<String,Object>> flows = new ArrayList<>();
+        for (FlowElement e : flowElements){
+            if(!StringUtils.isEmpty(e.getName())){      //过滤掉网关
+                    Map<String,Object> m = new HashMap<>();
+                    m.put("ActivityId",e.getId());
+                    m.put("步骤名称",e.getName());
+                    flows.add(m);
+            }
+        }
+        map.put(process.getDocumentation(),flows);
         return map;
     }
 
